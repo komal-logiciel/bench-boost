@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { userRole, profile, user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalTasks: 0,
     completedTasks: 0,
@@ -231,7 +233,7 @@ export default function Dashboard() {
                 <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No tasks available yet.</p>
                 {userRole !== 'bench_employee' && (
-                  <Button className="mt-4" onClick={() => window.location.href = '/create-task'}>
+                  <Button className="mt-4" onClick={() => navigate('/create-task')}>
                     Create Your First Task
                   </Button>
                 )}

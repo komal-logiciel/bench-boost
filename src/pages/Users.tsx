@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Users2, Shield, UserCog, User } from 'lucide-react';
+import { Users2, Shield, UserCog, User, Trash2 } from 'lucide-react';
+import { AddUserDialog } from '@/components/AddUserDialog';
 
 interface UserProfile {
   id: string;
@@ -110,6 +111,39 @@ const Users = () => {
     }
   };
 
+  const deleteUser = async (userId: string, email: string) => {
+    if (!confirm(`Are you sure you want to delete user: ${email}?`)) {
+      return;
+    }
+
+    try {
+      // First delete from profiles (this will cascade to user_roles due to foreign key)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
+
+      // Note: We can only delete the profile data, not the auth user
+      // In a production environment, you'd need admin API access for this
+
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin':
@@ -149,11 +183,14 @@ const Users = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
-          <p className="text-muted-foreground">
-            Manage user roles and permissions
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Users Management</h1>
+            <p className="text-muted-foreground">
+              Manage user roles and permissions
+            </p>
+          </div>
+          <AddUserDialog onUserAdded={fetchUsers} />
         </div>
 
         <Card>
@@ -199,19 +236,28 @@ const Users = () => {
                         {new Date(user.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value={user.role || 'bench_employee'}
-                          onValueChange={(value) => updateUserRole(user.user_id, value as any)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="bench_employee">Employee</SelectItem>
-                            <SelectItem value="team_lead">Team Lead</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          <Select
+                            value={user.role || 'bench_employee'}
+                            onValueChange={(value) => updateUserRole(user.user_id, value as any)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="bench_employee">Employee</SelectItem>
+                              <SelectItem value="team_lead">Team Lead</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteUser(user.user_id, user.email)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

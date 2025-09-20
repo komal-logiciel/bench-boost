@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,8 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle,
-  Trophy
+  Trophy,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,6 +38,7 @@ interface Task {
 
 export default function Tasks() {
   const { userRole, user } = useAuth();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -131,6 +134,28 @@ export default function Tasks() {
       }
     } catch (error) {
       toast.error('Failed to complete task');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string, taskTitle: string) => {
+    if (!confirm(`Are you sure you want to delete the task: ${taskTitle}?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) {
+        toast.error('Failed to delete task');
+      } else {
+        toast.success('Task deleted successfully');
+        fetchTasks();
+      }
+    } catch (error) {
+      toast.error('Failed to delete task');
     }
   };
 
@@ -247,7 +272,7 @@ export default function Tasks() {
           </div>
 
           {(userRole === 'admin' || userRole === 'team_lead') && (
-            <Button onClick={() => window.location.href = '/create-task'}>
+            <Button onClick={() => navigate('/create-task')}>
               Create New Task
             </Button>
           )}
@@ -380,6 +405,25 @@ export default function Tasks() {
                         >
                           Mark Complete
                         </Button>
+                      )}
+
+                      {(userRole === 'admin' || (userRole === 'team_lead' && task.created_by === user?.id)) && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/edit-task?id=${task.id}`)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteTask(task.id, task.title)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
